@@ -355,7 +355,7 @@ def evaluate_hanblog(batchsize):
     idx = 0
     accuracy = 0
     f_measure = 0
-    while idx < 10:
+    while idx < 9:
         fold = data[idx]
         X_train, y_train = fold["X_train"], fold["y_train"].ravel()  # Ravel flattens a (n,1) array into (n, )
         X_test, y_test   = fold["X_test"], fold["y_test"].ravel()
@@ -373,7 +373,7 @@ def evaluate_hanblog(batchsize):
         sent_optimizer = torch.optim.SGD(sent_attn.parameters(), lr=learning_rate, momentum= momentum)
         print("---------------- fold {} ----------------".format(idx))
         sys.stdout.flush()
-        best_model = train_early_stopping(idx, batchsize, X_train, y_train, X_validate, y_validate, word_attn, sent_attn, word_optmizer, sent_optimizer, criterion, 160, 5)
+        best_model = train_early_stopping(idx, batchsize, X_train, y_train, X_validate, y_validate, word_attn, sent_attn, word_optmizer, sent_optimizer, criterion, 695, 5)
         if not best_model:
             continue
         trained_word_attn = AttentionWordRNN(batch_size=batchsize, num_tokens=27414, embed_size=300,  word_gru_hidden=100, bidirectional= True).cuda()
@@ -389,4 +389,4 @@ def evaluate_hanblog(batchsize):
         f_measure += f1
         sys.stdout.flush()
         idx += 1
-    print("average acc, f score = {}, {}".format(accuracy/10, f_measure/10))
+    print("average acc, f score = {}, {}".format(accuracy/9, f_measure/9))
