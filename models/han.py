@@ -367,7 +367,9 @@ def evaluate_han(batchsize):
 
         trained_word_attn.load_state_dict(torch.load('saved_models/noage/fold{}_word_attn.pth'.format(idx)))
         trained_sent_attn.load_state_dict(torch.load('saved_models/noage/fold{}_sent_attn.pth'.format(idx)))
-
+        trained_word_attn.eval()
+        trained_sent_attn.eval()
+        
         acc, f1 = test_accuracy_full_batch(X_test, y_test, batchsize, trained_word_attn, trained_sent_attn)
         print("Best model is {}".format(best_model))
         print("---------------- accuracy, f-measure of fold {} is {}, {} ----------------".format(idx, acc, f1))
