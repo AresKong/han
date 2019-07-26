@@ -223,11 +223,11 @@ def gen_minibatch(tokens, labels, mini_batch_size, shuffle= False):
     for token, label in iterate_minibatches(tokens, labels, mini_batch_size, shuffle= shuffle):
         yield pad_batch(token), Variable(torch.from_numpy(label).cuda(), requires_grad= False)
 
-def check_val_loss(val_tokens, val_labels, mini_batch_size, word_attn_model, sent_attn_model, criterion):
+def check_val_loss(val_tokens, val_labels, mini_batch_size, word_attn_model, linear_layer, criterion):
     val_loss = []
     for token, label in iterate_minibatches(val_tokens, val_labels, mini_batch_size, shuffle= True):
         val_loss.append(test_data(pad_batch(token), Variable(torch.from_numpy(label).cuda(), requires_grad= False), 
-                                  word_attn_model, sent_attn_model, criterion))
+                                  word_attn_model, linear_layer, criterion))
     return np.mean(val_loss)
 
 def timeSince(since):
@@ -237,8 +237,8 @@ def timeSince(since):
     s -= m * 60
     return '%dm %ds' % (m, s)
 
-def train_early_stopping(fold, mini_batch_size, X_train, y_train, X_test, y_test, word_attn_model, sent_attn_model, 
-                         word_attn_optimiser, sent_attn_optimiser, loss_criterion, num_epoch, 
+def train_early_stopping(fold, mini_batch_size, X_train, y_train, X_test, y_test, word_attn_model, linear_layer, 
+                         word_attn_optimiser, linear_optimiser, loss_criterion, num_epoch, 
                          print_val_loss_every = 10):
     start = time.time()
     loss_full = []
@@ -253,15 +253,15 @@ def train_early_stopping(fold, mini_batch_size, X_train, y_train, X_test, y_test
     for i in range(1, num_epoch + 1):
         try:
             tokens, labels = next(g)
-            loss = train_data(tokens, labels, word_attn_model, sent_attn_model, word_attn_optimiser, sent_attn_optimiser, loss_criterion)
-            acc = test_accuracy_mini_batch(tokens, labels, word_attn_model, sent_attn_model)
+            loss = train_data(tokens, labels, word_attn_model, linear_layer, word_attn_optimiser, linear_optimiser, loss_criterion)
+            acc = test_accuracy_mini_batch(tokens, labels, word_attn_model, linear_layer)
             accuracy_full.append(acc)
             accuracy_epoch.append(acc)
             loss_full.append(loss)
             loss_epoch.append(loss)
             # check validation loss every n passes
             if i % print_val_loss_every == 0:
-                val_loss = check_val_loss(X_test, y_test, mini_batch_size, word_attn_model, sent_attn_model, loss_criterion)
+                val_loss = check_val_loss(X_test, y_test, mini_batch_size, word_attn_model, linear_layer, loss_criterion)
                 if np.isnan(val_loss):
                     return None
                 print('Loss at %d minibatches, %d epoch,(%s) is %f' %(i, epoch_counter, timeSince(start), np.mean(loss_epoch)))
@@ -271,8 +271,8 @@ def train_early_stopping(fold, mini_batch_size, X_train, y_train, X_test, y_test
                 if val_loss < min_val_loss:
                     min_val_loss = val_loss
                     min_idx = i
-                    torch.save(word_attn_model.state_dict(), 'saved_models/noage/fold{}_word_attn.pth'.format(fold))
-                    torch.save(sent_attn_model.state_dict(), 'saved_models/noage/fold{}_sent_attn.pth'.format(fold))
+                    torch.save(word_attn_model.state_dict(), 'saved_models/gru/fold{}_word_attn.pth'.format(fold))
+                    torch.save(linear_layer.state_dict(), 'saved_models/gru/fold{}_linear.pth'.format(fold))
         except StopIteration:
             epoch_counter += 1
             print('Reached %d epocs' % epoch_counter)
@@ -332,8 +332,8 @@ def evaluate_gru(batchsize):
         trained_word_attn = AttentionWordRNN(batch_size=batchsize, num_tokens=1829, embed_size=300,  word_gru_hidden=100, bidirectional= True).cuda()
         trained_linear_layer = LinearLayer(word_gru_hidden=100, n_classes=2, bidirectional= True).cuda()
 
-        trained_word_attn.load_state_dict(torch.load('saved_models/noage/fold{}_word_attn.pth'.format(idx)))
-        trained_linear_layer.load_state_dict(torch.load('saved_models/noage/fold{}_sent_attn.pth'.format(idx)))
+        trained_word_attn.load_state_dict(torch.load('saved_models/gru/fold{}_word_attn.pth'.format(idx)))
+        trained_linear_layer.load_state_dict(torch.load('saved_models/gru/fold{}_linear.pth'.format(idx)))
         trained_word_attn.eval()
         trained_linear_layer.eval()
         
